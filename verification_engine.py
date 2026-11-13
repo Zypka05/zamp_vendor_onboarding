@@ -248,11 +248,12 @@ def run_onboarding_pipeline(
     norm_b = normalize_company_name(b_holder)
     name_sim = SequenceMatcher(None, norm_v, norm_b).ratio() if (norm_v and norm_b) else 0.0
 
-    dba_text_norm = normalize_company_name(pdf_info.get("dba_clause", ""))
+    dba_Text_norm = normalize_company_name(pdf_info.get("dba_clause", ""))
+    dba_raw_lower = pdf_info.get("dba_clause", "None").lower()
     has_valid_dba_bridge = (
-        pdf_info.get("dba_clause", "None") != "None"
-        and norm_v in dba_text_norm
-        and norm_b in dba_text_norm
+        dba_raw_lower != "none"
+        and "dba" in dba_raw_lower
+        and (norm_v in dba_Text_norm or v_name.lower() in dba_raw_lower)
     )
 
     if name_sim < 0.78:
