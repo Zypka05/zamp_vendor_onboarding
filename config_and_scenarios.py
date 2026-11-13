@@ -42,6 +42,21 @@ COUNTRY_BANK_REGEX = {
     "United Kingdom": (r"^GB[0-9]{2}[A-Z]{4}[0-9]{14}$", "22-char UK IBAN (GBxxXXXX...)")
 }
 
+INDIAN_BANK_ACCOUNT_LENGTHS = {
+    "HDFC": ([14], "HDFC Bank (strictly 14 digits)"),
+    "ICIC": ([12], "ICICI Bank (strictly 12 digits)"),
+    "SBIN": ([11, 17], "State Bank of India (11 or 17 digits)"),
+    "UTIB": ([15], "Axis Bank (strictly 15 digits)"),
+    "KKBK": ([10, 14], "Kotak Mahindra Bank (10 or 14 digits)"),
+    "PUNB": ([14, 16], "Punjab National Bank (14 or 16 digits)"),
+    "BARB": ([14], "Bank of Baroda (strictly 14 digits)"),
+    "CNRB": ([12, 13], "Canara Bank (12 or 13 digits)"),
+    "UBIN": ([15], "Union Bank of India (strictly 15 digits)"),
+    "IDIB": ([9, 10, 11], "Indian Bank (9 to 11 digits)"),
+    "YESB": ([15], "Yes Bank (strictly 15 digits)"),
+    "INDB": ([12, 14], "IndusInd Bank (12 or 14 digits)")
+}
+
 # 1 Happy Path + 4 Deliberate Edge Cases
 SCENARIOS = {
     "HP-01: Apex Industrial Automation (Happy Path — Clean Approval)": {

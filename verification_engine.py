@@ -3,6 +3,9 @@ import time
 from datetime import datetime
 from difflib import SequenceMatcher
 
+from config_and_scenarios import (
+    INDIA_STATE_CODES, COUNTRY_TAX_REGEX, COUNTRY_BANK_REGEX, INDIAN_BANK_ACCOUNT_LENGTHS
+)
 from config_and_scenarios import INDIA_STATE_CODES, COUNTRY_TAX_REGEX, COUNTRY_BANK_REGEX
 from pdf_and_ai_extractor import extract_pdf_intelligence, synthesize_vendor_communication
 from audit_db import log_run_to_db
@@ -325,6 +328,59 @@ def run_onboarding_pipeline(
             "expected": bank_desc,
             "result": "PASS"
         })
+
+    # Cross-Check Bank Account Number Digits vs Specific Bank Prefix (SBI, HDFC, ICICI, Axis, etc.)
+    acct_num = str(vendor_data.get("bank_account", "")).strip()
+    if acct_num:
+        if not acct_num.isdigit():
+            stage4_status = "FAIL"
+            risk_score += 45
+            msg = f"Invalid Bank Account Format: Account number '{acct_num}' contains non-numeric characters."
+            stage4_msgs.append(msg)
+            critical_rejects.append(msg)
+            field_checks.append({
+                "check": "Bank Account Number Syntax",
+                "submitted": acct_num,
+                "expected": "Numeric digits only",
+                "result": "FAIL (Non-Numeric Account)"
+            })
+        elif country == "India" and len(routing_code) == 11:
+            bank_prefix = routing_code[:4]
+            acct_len = len(acct_num)
+            if bank_prefix in INDIAN_BANK_ACCOUNT_LENGTHS:
+                valid_lengths, bank_label = INDIAN_BANK_ACCOUNT_LENGTHS[bank_prefix]
+                if acct_len not in valid_lengths:
+                    stage4_status = "WARN" if stage4_status == "PASS" else stage4_status
+                    risk_score += 30
+                    expected_str = " or ".join(str(x) for x in valid_lengths)
+                    msg = (
+                        f"Cross-Field Bank Account Length Mismatch: IFSC prefix '{bank_prefix}' belongs to {bank_label}, "
+                        f"which requires {expected_str} digits, but submitted account '{acct_num}' has {acct_len} digits."
+                    )
+                    stage4_msgs.append(msg)
+                    pending_remediations.append(msg)
+                    field_checks.append({
+                        "check": f"IFSC ({bank_prefix}) vs Account Length",
+                        "submitted": f"{acct_len} digits ({acct_num})",
+                        "expected": f"{expected_str} digits for {bank_label}",
+                        "result": "PENDING (Account Length Mismatch)"
+                    })
+                else:
+                    stage4_msgs.append(
+                        f"Account number length ({acct_len} digits) verified against {bank_label} ({bank_prefix}) standard."
+                    )
+                    field_checks.append({
+                        "check": f"IFSC ({bank_prefix}) vs Account Length",
+                        "submitted": f"{acct_len} digits",
+                        "expected": f"{valid_lengths} digits ({bank_label})",
+                        "result": "PASS"
+                    })
+            elif not (9 <= acct_len <= 18):
+                stage4_status = "WARN" if stage4_status == "PASS" else stage4_status
+                risk_score += 25
+                msg = f"Unusual RBI Account Length: Account '{acct_num}' has {acct_len} digits (RBI standard is 9–18 digits)."
+                stage4_msgs.append(msg)
+                pending_remediations.append(msg)
 
     stages.append({
         "stage_num": 4,
